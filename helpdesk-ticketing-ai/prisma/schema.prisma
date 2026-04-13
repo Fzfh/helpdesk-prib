@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  lastLogin    DateTime? @map("last_login")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  
+  responses    TicketResponse[]
+  
+  @@map("admins")
+}
+
+model Ticket {
+  id           String   @id @default(cuid())
+  ticketNumber String   @unique @map("ticket_number")
+  clientName   String   @map("client_name")
+  clientEmail  String   @map("client_email")
+  title        String
+  description  String   @db.Text
+  category     String
+  priority     String   @default("Medium")
+  status       String   @default("Open")
+  attachment   String?  
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  responses    TicketResponse[]
+  aiSuggestion AiSuggestion?
+  
+  @@index([ticketNumber])
+  @@index([status])
+  @@map("tickets")
+}
+
+model TicketResponse {
+  id        String   @id @default(cuid())
+  ticketId  String   @map("ticket_id")
+  adminId   String   @map("admin_id")
+  message   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  admin     Admin    @relation(fields: [adminId], references: [id])
+  
+  @@map("ticket_responses")
+}
+
+model AiSuggestion {
+  id                String   @id @default(cuid())
+  ticketId          String   @unique @map("ticket_id")
+  summary           String   @db.Text
+  suggestedCategory String   @map("suggested_category")
+  suggestedPriority String   @map("suggested_priority")
+  isApproved        Boolean? @map("is_approved")
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  ticket            Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  @@map("ai_suggestions")
+}
